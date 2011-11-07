@@ -1,4 +1,5 @@
 unit VSocket;
+{    does all server socketry   }
 
 {$mode delphi}
 
@@ -12,24 +13,26 @@ const
                  // don't assume it's any particular value
 
 type
-    TSocket = synsock.TSocket;
+    TVSocket = TTCPBlockSocket;
 
 procedure Initialize;
 procedure Finalize;
-function Accept(timeout: Cardinal): TSocket;
+function Accept(timeout: Cardinal): TVSocket;
 
 implementation
 var
    serverSocket: TTCPBlockSocket;
 
-function Accept(timeout: Cardinal): TSocket;
+function Accept(timeout: Cardinal): TVSocket;
 begin
   if serverSocket.CanRead(timeout) then
   begin
-    result := serverSocket.Accept();
+    result := TTCPBlockSocket.Create();
+    result.Socket := serverSocket.Accept();
+    result.GetSins();
     Exit;
   end;
-  result := 0;
+  result := nil;
 end;
 
 procedure Finalize;

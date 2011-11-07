@@ -8,18 +8,20 @@ program vanad;
 }
 
 uses
-  Classes, AVLTree, exavltree, SysUtils, Configuration, Sockets, VSocket,
-ClientConnection;
+{$IFDEF UNIX}{$IFDEF UseCThreads}
+cthreads,
+{$ENDIF}{$ENDIF}
+Classes,  AVLTree, exavltree, SysUtils, Configuration, Sockets, VSocket,
+workerthread, CommonData;
+
 
 {$R *.res}
 
 var
-  tablespace: array[0..254] of TExAVLTree;
-  i: Cardinal;
+  i, j: Cardinal;
   Terminating: Boolean = false;
 
-  client: TSocket;
-
+  WorkerThreads: array of TWorkerThread;
 begin
      Writeln('Vanad v0.1');
      Writeln('(c) by Henrietta 2011');
@@ -37,16 +39,30 @@ begin
          end;
      end;
 
-     Configuration.Finalize;
-
-     Writeln('Listening...');
+     Writeln('Setting up socket...');
      VSocket.Initialize;
 
-     while true do
+     Writeln('Spawning workers...');
+     j := Configuration.GetI('Operation', 'WorkerThreads');
+     Writeln(j);
+     SetLength(WorkerThreads, j);
+     for i := 0 to j-1 do
+         WorkerThreads[i] := TWorkerThread.Create(i);
+
+     Writeln('Launching...');
+     for i := 0 to j-1 do
+         WorkerThreads[i].Resume();
+
+     Readln;
+
+     Writeln('Kill''em...');
+     for i := 0 to j-1 do
+         WorkerThreads[i].Terminate();
+
+     for i := 0 to j-1 do
      begin
-          client := VSocket.Accept(1000);
-          if client <> INVALID_SOCKET then TClientConnection.Create(client);
-          if Terminating then break;
+          WorkerThreads[i].WaitFor();
+          WorkerThreads[i].Destroy();
      end;
 
      Writeln('Terminating');
