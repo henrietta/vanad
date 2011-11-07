@@ -8,57 +8,52 @@ program vanad;
 }
 
 uses
-  Classes, AVLTree, exavltree, SysUtils;
+  Classes, AVLTree, exavltree, SysUtils, Configuration, Sockets, VSocket,
+ClientConnection;
 
 {$R *.res}
 
 var
-  Tree: TExAVLTree;
-  n: TAVLNode;
+  tablespace: array[0..254] of TExAVLTree;
+  i: Cardinal;
+  Terminating: Boolean = false;
 
-type
-    XThread = class(TThread)
-      procedure Execute; override;
-      constructor Create();
-    end;
+  client: TSocket;
 
-constructor XThread.Create();
 begin
-     FreeOnTerminate := True;
-     inherited Create(false);
-end;
-
-function rs: ansistring;
-var
-  i: integer;
-begin
-     result := '';
-     for i := 1 to 1 do
-       result := result + chr(random(89)+33);
-end;
-
-procedure XThread.Execute;
-var
-   i: integer;
-begin
-     for i := 0 to 100000000 do Tree.Assign(rs(), '1');
-end;
+     Writeln('Vanad v0.1');
+     Writeln('(c) by Henrietta 2011');
+     Configuration.Initialize;
 
 
-var
-  i: Integer;
-  r: ansistring;
-begin
-     Tree := TExAVLTree.Create();
-
-     for i := 0 to 3 do
+     Writeln('Replaying datafiles...');
+     for i := 0 to 254 do
      begin
-          XThread.Create();
+         tablespace[i] := TExAVLTree.Create();
+
+         if FileExists(Configuration.GetS('FS', 'TableHierarchy')+'/'+IntToStr(i)) then
+         begin
+              writeln('Would replay ', i, ' but don''t want to');
+         end;
      end;
 
+     Configuration.Finalize;
+
+     Writeln('Listening...');
+     VSocket.Initialize;
+
+     while true do
+     begin
+          client := VSocket.Accept(1000);
+          if client <> INVALID_SOCKET then TClientConnection.Create(client);
+          if Terminating then break;
+     end;
+
+     Writeln('Terminating');
+
+     VSocket.Finalize;
+
+
      readln;
-
-
-     Tree.Destroy;
 end.
 

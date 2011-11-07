@@ -12,15 +12,16 @@ type
   private
     Lock: TMultiReadExclusiveWriteSynchronizer;
   public
-    procedure Assign(Key, Value: ansistring);
-    function Read(Key: ansistring): ansistring;
+    procedure Assign(Key, Value: AnsiString);
+    function Read(Key: AnsiString): AnsiString;
 
     constructor Create();
+    destructor Destroy();
   end;
 
 implementation
 
-procedure TExAVLTree.Assign(Key, Value: ansistring);
+procedure TExAVLTree.Assign(Key, Value: AnsiString);
 label
   Inserting;
 var
@@ -43,7 +44,6 @@ Inserting:
   self.Lock.EndRead();
   self.Lock.BeginWrite();
 
-
   node := self.FindClosest(Key); // we need to lookup it again - situation could have changed!
   if (node = nil) then
     self.Insert(Key, Value, node)
@@ -55,7 +55,7 @@ Inserting:
   self.Lock.EndWrite();
 end;
 
-function TExAVLTree.Read(Key: ansistring): ansistring;
+function TExAVLTree.Read(Key: AnsiString): AnsiString;
 var
   node: TAVLNode;
 begin
@@ -72,10 +72,16 @@ begin
   self.Lock.EndRead();
 end;
 
+destructor TExAVLTree.Destroy();
+begin
+  self.Lock.Destroy;
+  inherited Destroy();
+end;
+
 constructor TExAVLTree.Create();
 begin
-  self.Lock := TMultiReadExclusiveWriteSynchronizer.Create();
   inherited Create();
+  self.Lock := TMultiReadExclusiveWriteSynchronizer.Create();
 end;
 
 end.
