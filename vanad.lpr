@@ -51,7 +51,7 @@ begin
 
      Writeln('Launching...');
      for i := 0 to j-1 do
-         WorkerThreads[i].Resume();
+         WorkerThreads[i].Start();
 
      Readln;
 
