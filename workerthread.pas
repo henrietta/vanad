@@ -48,33 +48,26 @@ begin
     self.socket := VSocket.Accept(1000);
     if self.socket = nil then continue;
 
-    Writeln('Accepted');
-
     request.RequestCode := self.socket.RecvByte(4000);
     if self.socket.LastError > 0 then goto DisposeSocket;
-    Writeln('Order type=', request.RequestCode);
 
     request.TablespaceID := self.socket.RecvByte(4000);
     if self.socket.LastError > 0 then goto DisposeSocket;
 
 
     request.KeyLength := ntohl(self.socket.RecvInteger(4000));
-    Writeln('KL=', request.KeyLength);
     if self.socket.LastError > 0 then goto DisposeSocket;
 
     request.ValueLength := ntohl(self.socket.RecvInteger(4000));
     if self.socket.LastError > 0 then goto DisposeSocket;
-    Writeln('VL=', request.ValueLength);
 
     Key := self.socket.RecvBufferStr(request.KeyLength, 4000);
     if self.socket.LastError > 0 then goto DisposeSocket;
-    Writeln('Readed in=', key);
 
     if request.ValueLength > 0 then
     begin
         Value := self.socket.RecvBufferStr(request.ValueLength, 4000);
         if self.socket.LastError > 0 then goto DisposeSocket;
-        Writeln('Readed in=', value);
     end;
 
     if request.RequestCode = 0 then
@@ -96,6 +89,10 @@ begin
          tablespace[request.TablespaceID].Assign(Key, Value);
          self.socket.SendByte(0);
          self.socket.SendInteger(0);
+    end else
+    if request.RequestCode = 2 then
+    begin
+         tablespace[request.TablespaceID].Assign(Key, '');
     end;
 
 DisposeSocket:

@@ -8,7 +8,7 @@ uses
   ExAVLTree;
 
 var
-  tablespace: array[0..254] of TExAVLTree;
+  tablespace: array[0..255] of TExAVLTree;
 
 
 implementation

@@ -29,7 +29,7 @@ begin
 
 
      Writeln('Replaying datafiles...');
-     for i := 0 to 254 do
+     for i := 0 to 255 do
      begin
          tablespace[i] := TExAVLTree.Create();
 

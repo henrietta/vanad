@@ -62,8 +62,6 @@ begin
   serverSocket.Bind(Configuration.GetS('TCP', 'ListeningInterface'),
                     Configuration.GetS('TCP', 'ListeningPort'));
   serverSocket.SocksTimeout := 1;
-  serverSocket.SetRecvTimeout(1);
-  serverSocket.SetSendTimeout(1);
   serverSocket.Listen();
 end;
 
