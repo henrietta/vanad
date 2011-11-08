@@ -50,29 +50,29 @@ begin
 
     Writeln('Accepted');
 
-    request.RequestCode := self.socket.RecvByte(1000);
+    request.RequestCode := self.socket.RecvByte(4000);
     if self.socket.LastError > 0 then goto DisposeSocket;
     Writeln('Order type=', request.RequestCode);
 
-    request.TablespaceID := self.socket.RecvByte(1000);
+    request.TablespaceID := self.socket.RecvByte(4000);
     if self.socket.LastError > 0 then goto DisposeSocket;
 
 
-    request.KeyLength := ntohl(self.socket.RecvInteger(1000));
+    request.KeyLength := ntohl(self.socket.RecvInteger(4000));
     Writeln('KL=', request.KeyLength);
     if self.socket.LastError > 0 then goto DisposeSocket;
 
-    request.ValueLength := ntohl(self.socket.RecvInteger(1000));
+    request.ValueLength := ntohl(self.socket.RecvInteger(4000));
     if self.socket.LastError > 0 then goto DisposeSocket;
     Writeln('VL=', request.ValueLength);
 
-    Key := self.socket.RecvBufferStr(request.KeyLength, 1000);
+    Key := self.socket.RecvBufferStr(request.KeyLength, 4000);
     if self.socket.LastError > 0 then goto DisposeSocket;
     Writeln('Readed in=', key);
 
     if request.ValueLength > 0 then
     begin
-        Value := self.socket.RecvBufferStr(request.ValueLength, 1000);
+        Value := self.socket.RecvBufferStr(request.ValueLength, 4000);
         if self.socket.LastError > 0 then goto DisposeSocket;
         Writeln('Readed in=', value);
     end;
@@ -99,9 +99,8 @@ begin
     end;
 
 DisposeSocket:
-    self.socket.CloseSocket();
+    if self.socket.LastError > 0 then writeln(self.socket.GetErrorDesc(self.socket.lasterror));
     self.socket.Destroy();
-    self.socket := nil;
   end;
 end;
 
