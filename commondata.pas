@@ -9,6 +9,7 @@ uses
 
 var
   tablespace: array[0..255] of TExAVLTree;
+  SocketOpTimeout: Cardinal;
 
 
 implementation

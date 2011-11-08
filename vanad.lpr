@@ -28,6 +28,8 @@ begin
      Configuration.Initialize;
 
 
+     SocketOpTimeout := Configuration.GetI('Operation', 'SocketOperationTimeout');
+
      Writeln('Replaying datafiles...');
      for i := 0 to 255 do
      begin
@@ -52,6 +54,8 @@ begin
      Writeln('Launching...');
      for i := 0 to j-1 do
          WorkerThreads[i].Start();
+
+     Configuration.Finalize();
 
      Readln;
 

@@ -8,10 +8,6 @@ interface
 uses
   Classes, SysUtils, blcksock, synsock, Configuration;
 
-const
-  INVALID_SOCKET = synsock.INVALID_SOCKET;
-                 // don't assume it's any particular value
-
 type
     TVSocket = TTCPBlockSocket;
 
