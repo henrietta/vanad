@@ -23,7 +23,7 @@ type
 implementation
 procedure TWorkerThread.Execute();
 label
-     DisposeSocket;
+     DisposeSocket, NothingDetected;
 var
   RequestCode: Byte;
   TablespaceID: Byte;
@@ -38,7 +38,7 @@ begin
     while True do
     begin
         self.socket := VSocket.Accept(1000);
-        if self.socket = nil then continue;
+        if self.socket = nil then goto NothingDetected;
 
         RequestCode := self.socket.RecvByte(SocketOpTimeout);
         if self.socket.LastError > 0 then goto DisposeSocket;
@@ -90,6 +90,7 @@ begin
     end;
 DisposeSocket:
     self.socket.Destroy();
+NothingDetected:
   end;
 end;
 
