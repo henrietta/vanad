@@ -12,10 +12,9 @@ uses
 cthreads,
 {$ENDIF}{$ENDIF}
 Classes,  AVLTree, exavltree, SysUtils, Configuration, Sockets, VSocket,
-workerthread, CommonData;
+workerthread, CommonData, shutdowner;
 
 
-{$R *.res}
 procedure ReadTable(tabid: Integer);
 var
   d: Longword;
@@ -97,41 +96,36 @@ var
 
   FFile: THandle;
 begin
-     Writeln('Vanad v0.1');
-     Writeln('(c) by Henrietta 2011');
+     Writeln(stdout, 'Vanad v0.1');
+     Writeln(stdout, '(c) by Henrietta 2011');
      Configuration.Initialize;
 
 
-     SocketOpTimeout := Configuration.GetI('Operation', 'SocketOperationTimeout');
 
-     Writeln('Replaying datafiles...');
+     SocketOpTimeout := Configuration.GetI('Operation', 'SocketOperationTimeout');
+     Writeln(stdout, 'Starting up...');
      for i := 0 to 255 do
      begin
          tablespace[i] := TExAVLTree.Create();
 
-         if FileExists(Configuration.GetS('FS', 'TableHierarchy')+'/'+IntToStr(i)) then
-            ReadTable(i);
+         if FileExists(Configuration.GetS('FS', 'TableHierarchy')+'/'+IntToStr(i)) then ReadTable(i);
      end;
 
-     Writeln('Setting up socket...');
      VSocket.Initialize;
 
-     Writeln('Spawning workers...');
      j := Configuration.GetI('Operation', 'WorkerThreads');
-     Writeln(j);
      SetLength(WorkerThreads, j);
      for i := 0 to j-1 do
          WorkerThreads[i] := TWorkerThread.Create(i);
 
-     Writeln('Launching...');
-     for i := 0 to j-1 do
-         WorkerThreads[i].Start();
+     for i := 0 to j-1 do WorkerThreads[i].Start();
 
 
-     Writeln('Operating');
-     Readln;
+     Writeln(stdout, 'Running...');
 
-     Writeln('Terminating threads');
+     shutdowner.control;
+
+     Writeln(stdout, 'Shutting down...');
      for i := 0 to j-1 do
          WorkerThreads[i].Terminate();
 
@@ -141,14 +135,8 @@ begin
           WorkerThreads[i].Destroy();
      end;
 
-     Writeln('Shutting down socket');
      VSocket.Finalize;
-
-     Writeln('Writing tables to disk');
      for i := 0 to 255 do WritebackTable(i);
-
-     Writeln('Done');
      Configuration.Finalize();
-     readln;
 end.
 
