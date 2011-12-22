@@ -11,9 +11,9 @@ program vanad;
 }
 
 uses
-{$IFDEF UNIX}{$IFDEF UseCThreads}
+{$IFDEF Unix}
 cthreads,
-{$ENDIF}{$ENDIF}
+{$ENDIF}
 Classes,  AVLTree, exavltree, SysUtils, Configuration, Sockets, VSocket,
 workerthread, CommonData, shutdowner;
 
@@ -63,7 +63,6 @@ var
 begin
   AssignFile(f, Configuration.GetS('FS', 'TableHierarchy')+'/'+IntToStr(tabid));
   Rewrite(f, 1);
-  Writeln(tabid);
   iter := TAVLTreeIterator.Create(tablespace[tabid]);
 
   while not iter.Done do
@@ -99,14 +98,9 @@ var
 
   FFile: THandle;
 begin
-     Writeln(stdout, 'Vanad v0.1');
-     Writeln(stdout, '(c) by Henrietta 2011');
      Configuration.Initialize;
 
-
-
      SocketOpTimeout := Configuration.GetI('Operation', 'SocketOperationTimeout');
-     Writeln(stdout, 'Starting up...');
      for i := 0 to 255 do
      begin
          tablespace[i] := TExAVLTree.Create();
@@ -123,12 +117,8 @@ begin
 
      for i := 0 to j-1 do WorkerThreads[i].Start();
 
-
-     Writeln(stdout, 'Running...');
-
      shutdowner.control;
 
-     Writeln(stdout, 'Shutting down...');
      for i := 0 to j-1 do
          WorkerThreads[i].Terminate();
 

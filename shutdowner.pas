@@ -6,26 +6,25 @@ unit shutdowner;
 interface
 
 uses
-  Classes, SysUtils, {$IFDEF Windows}Windows{$ENDIF}{$IFDEF Unix}BaseUnix, Crt{$ENDIF};
+  Classes, SysUtils, syncobjs, {$IFDEF Windows}Windows{$ENDIF}{$IFDEF Unix}BaseUnix{$ENDIF};
 
 procedure control;
 
 implementation
 var
-  do_Terminate: Boolean;
+  termLock: Boolean;
 
 {$IFDEF Windows}
 function exit_handler(_para: DWORD): WINBOOL; stdcall;
 begin
-     do_Terminate := True;
+     termLock := False;
      result := True;
 end;
 
 procedure control;
 begin
-     do_Terminate := False;
      Windows.SetConsoleCtrlHandler(exit_handler, True);
-     while not do_Terminate do Windows.Sleep(5000);
+     while termLock do Windows.Sleep(5000);
 end;
 {$ENDIF}
 
@@ -33,17 +32,20 @@ end;
 {$IFDEF Unix}
 procedure exit_handler(sig: Longint); cdecl;
 begin
-     do_Terminate := True;
+     termLock := False;
 end;
 
 procedure control;
 begin
-     do_Terminate := False;
-     fpsignal(SIGINT, signalhandler(@exit_handler));
      fpsignal(SIGTERM, signalhandler(@exit_handler));
-     while not do_Terminate do delay(5000);
+     while termLock do fpSelect(0,nil,nil,nil,5000);
 end;
 {$ENDIF}
+
+initialization
+begin
+     termLock := True;
+end;
 
 end.
 
