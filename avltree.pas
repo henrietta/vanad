@@ -93,26 +93,7 @@ type
     end;
 
 
-procedure Visualise(n: Cardinal; nd: TAVLNode);
 implementation
-procedure Visualise(n: Cardinal; nd: TAVLNode);
-var
-  i: Integer;
-begin
-    for i := 1 to n do
-       Write(' ');
-    Writeln(nd.Key);
-    if nd.Left <> nil then begin
-       Write('L: ');
-       Visualise(n+1, nd.Left);
-    end;
-    if nd.Right <> nil then begin
-       Write('R: ');
-       visualise(n+1, nd.Right);
-    end;
-end;
-
-
 function ReparentIA(n, parent: TAVLNode): TAVLNode;
 {   if n is not nil, sets n.Parent = parent.       Returns n }
 begin
