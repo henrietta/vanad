@@ -83,6 +83,15 @@ type
                 3   4                                   }
     end;
 
+    TAVLTreeIterator = class
+    public
+            Tree: TAVLTree;
+            Node: TAVLNode;
+            Done: Boolean;
+            constructor Create(tree: TAVLTree);
+            procedure Next();
+    end;
+
 
 procedure Visualise(n: Cardinal; nd: TAVLNode);
 implementation
@@ -116,6 +125,67 @@ begin
     result := n;
     result.Parent := parent;
 end;
+// =========================================================    TAVLTreeIterator
+constructor TAVLTreeIterator.Create(tree: TAVLTree);
+begin
+     self.Tree := tree;
+     self.Node := self.Tree.Root;
+     self.Done := (self.Node = nil);
+end;
+
+procedure TAVLTreeIterator.Next();
+{
+ Algorithm sets self.Node as next node on which an op should be performed. It should be
+ executed until NIL returns
+
+ Input: Current node [N]
+ Output: Next node or NIL
+
+ Precondition: First node is the root
+
+ 1. If N has no kids, jump to 3
+ 2. If N has left-side child, return left-side child, else return right-side kid.
+ 3. If N is the root, return NIL
+ 4. If N isn't a left-side kid of it's parent, jump to 6
+ 5. If parent of N has right-side kid, return it
+ 6. N := parent of N
+ 7. Jump to 3
+}
+begin
+     // Points 1-2
+     if (self.Node.Left <> nil) and (self.Node.Right <> nil) then
+     begin
+          if self.Node.Left <> nil then
+             self.Node := self.Node.Left
+          else
+              self.Node := self.Node.Right;
+
+          Exit;
+     end;
+
+     while True do
+     begin
+         if self.Node = self.Tree.Root then             // point 3
+         begin
+              self.Done := True;
+              self.Node := nil;
+              Exit;
+         end;
+
+         if self.Node = self.Node.Parent.Left then      // point 4
+             if self.Node.Parent.Right <> nil then      // point 5
+             begin
+                self.Node := self.Node.Parent.Right;
+                Exit;
+             end;
+
+         self.Node := self.Node.Parent;     // point 6
+
+         // And point 7 :)
+     end;
+
+end;
+
 // =================================================================    TAVLTree
 procedure TAVLTree.Insert(Key, Value: AnsiString; closestNode: TAVLNode);
 var
