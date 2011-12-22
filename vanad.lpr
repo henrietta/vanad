@@ -1,4 +1,7 @@
 program vanad;
+
+{$mode delphi}
+
 {
         Basic idea:
                    - SELECTs are to be fast

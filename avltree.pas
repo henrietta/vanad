@@ -4,7 +4,7 @@ unit AVLTree;
 
      Posesses basic routines to build on.
 }
-
+{$mode delphi}
 interface
 
 uses
