@@ -91,12 +91,7 @@ end;
 
 var
   i, j: Cardinal;
-  b: Byte;
-  Terminating: Boolean = false;
-
   WorkerThreads: array of TWorkerThread;
-
-  FFile: THandle;
 begin
      Configuration.Initialize;
 

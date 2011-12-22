@@ -6,7 +6,7 @@ unit shutdowner;
 interface
 
 uses
-  Classes, SysUtils, syncobjs, {$IFDEF Windows}Windows{$ENDIF}{$IFDEF Unix}BaseUnix{$ENDIF};
+  Classes, SysUtils, {$IFDEF Windows}Windows{$ENDIF}{$IFDEF Unix}BaseUnix{$ENDIF};
 
 procedure control;
 
