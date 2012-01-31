@@ -19,7 +19,7 @@ def ASSIGN_to_bytes(tablespace, key, value):
     return REQ_to_bytes(RQT_ASSIGN, tablespace, key, value)
 
 def DELETE_to_bytes(tablespace, key):
-    return REQ_to_bytes(RQT_DELETE, tablespace, key)
+    return REQ_to_bytes(RQT_DELETE, tablespace, key, '')
 
 
 def scan_frame(frame):
@@ -232,7 +232,7 @@ class VanadConnection(object):
         self.__ensure_connected()
         while True:
             try:
-                self.__transact(DELETE_to_bytes(tablespace, key, value))
+                self.__transact(DELETE_to_bytes(tablespace, key))
                 return
             except:
                 self.__ensure_connected()

@@ -86,6 +86,8 @@ begin
         if RequestCode = 2 then
         begin
              tablespace[TablespaceID].Assign(Key, '');
+             self.socket.SendByte(0);
+             self.socket.SendInteger(0);
         end;
 
         if (RequestCode and $80) > 0 then
