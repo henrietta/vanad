@@ -43,7 +43,6 @@ def scan_frame(frame):
 
     return resultcode, data
 
-
 class VanadConnection(object):
     """
     Class that represents a connection to a Vanad database
@@ -152,14 +151,13 @@ class VanadConnection(object):
         started_on = time()
         received_data = bytearray()
         while True:
-                rxs, txs, exs = select((self.socket, ), (self.socket, ), (), self.txrx_timeout)
+                rxs, txs, exs = select((self.socket, ), (), (), self.txrx_timeout)
                 if len(rxs) == 0: raise Exception # Timeout
                     # Entire op timeout exceeded
                 if time() - started_on > self.eo_timeout: raise Exception
                 if len(rxs) == 1: # Socket ready or disconnected
                     data = self.socket.recv(1024)
-                    if len(data) == 0:  # Socket disconnected
-                        raise Exception
+                    if len(data) == 0: raise Exception # Socket disconnected
 
                     received_data += data
 
@@ -169,6 +167,7 @@ class VanadConnection(object):
                         continue
                     else:       # Frame completed
                         break
+        self.last_activity = time()     # Note the activity
         if result == 0x01: return None  # Not found for GET's
         if len(value) == 0: return None # None and empty string have same meaning
         return value
