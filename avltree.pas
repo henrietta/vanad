@@ -182,8 +182,6 @@ begin
        self.Root := new_node;
        Exit;
     end;
-    if node.Key = Key then
-       raise Exception.Create('Hey, how come we are here?');
 
     if Key < node.Key then     // left-insert
     begin
@@ -222,11 +220,13 @@ begin
              node.RotateLR();
              node.Left.Balance := -1;
           end;
+
           if node.Left.Balance = -1 then
           begin                        // imbalanced left - skewed left
              node := self.RotateLL(node);
              node.Balance := 0;
              node.Right.Balance := 0;
+             node.Left.Balance := 0;
           end;
 
           Exit;
@@ -238,11 +238,13 @@ begin
              node.RotateRL();
              node.Right.Balance := 1;
           end;
+
           if node.Right.Balance = 1 then     // imbalanced right - skewed right
           begin
              node := self.RotateRR(node);
              node.Balance := 0;
              node.Left.Balance := 0;
+             node.Right.Balance := 0;
           end;
 
           Exit;
