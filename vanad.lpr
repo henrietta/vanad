@@ -67,21 +67,25 @@ begin
 
   while not iter.Done do
   begin
-      d := Length(iter.Node.Key);
-      b := d shr 24;                   BlockWrite(f, b, 1, Temp);
-      b := (d shr 16) and $FF;         BlockWrite(f, b, 1, Temp);
-      b := (d shr 8) and $FF;          BlockWrite(f, b, 1, Temp);
-      b := d and $FF;                  BlockWrite(f, b, 1, Temp);
+      if iter.Node.Value <> '' then    // dont write-back empty fields
+      begin
 
-      BlockWrite(f, iter.Node.Key[1], d, Temp);      // Magic :)
+          d := Length(iter.Node.Key);
+          b := d shr 24;                   BlockWrite(f, b, 1, Temp);
+          b := (d shr 16) and $FF;         BlockWrite(f, b, 1, Temp);
+          b := (d shr 8) and $FF;          BlockWrite(f, b, 1, Temp);
+          b := d and $FF;                  BlockWrite(f, b, 1, Temp);
 
-      d := Length(iter.Node.Value);
-      b := d shr 24;                   BlockWrite(f, b, 1, Temp);
-      b := (d shr 16) and $FF;         BlockWrite(f, b, 1, Temp);
-      b := (d shr 8) and $FF;          BlockWrite(f, b, 1, Temp);
-      b := d and $FF;                  BlockWrite(f, b, 1, Temp);
+          BlockWrite(f, iter.Node.Key[1], d, Temp);      // Magic :)
 
-      BlockWrite(f, iter.Node.Value[1], d, Temp);
+          d := Length(iter.Node.Value);
+          b := d shr 24;                   BlockWrite(f, b, 1, Temp);
+          b := (d shr 16) and $FF;         BlockWrite(f, b, 1, Temp);
+          b := (d shr 8) and $FF;          BlockWrite(f, b, 1, Temp);
+          b := d and $FF;                  BlockWrite(f, b, 1, Temp);
+
+          BlockWrite(f, iter.Node.Value[1], d, Temp);
+      end;
 
       iter.Next();
   end;
