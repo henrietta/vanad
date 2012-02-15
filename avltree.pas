@@ -134,7 +134,7 @@ procedure TAVLTreeIterator.Next();
 }
 begin
      // Points 1-2
-     if (self.Node.Left <> nil) and (self.Node.Right <> nil) then
+     if (self.Node.Left <> nil) or (self.Node.Right <> nil) then
      begin
           if self.Node.Left <> nil then
              self.Node := self.Node.Left
