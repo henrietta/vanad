@@ -1,0 +1,8 @@
+Vanad is a peculiarly fast associative string-string database.
+See project wiki for more info. 
+License is public domain.
+
+It was made as a project for 'Introduction to programming' course on Politechnika Rzeszowska.
+Special thanks to course lecturer, Grzegorz Drałus, PhD.
+
+All protocol documentation is available on project's wiki.
