@@ -68,26 +68,24 @@ begin
              Value := tablespace[TablespaceID].Read(Key);
              if Value = '' then
              begin
-                  self.socket.SendByte(1);
-                  self.socket.SendInteger(0);
+                  self.socket.SendString(#1#0#0#0#0);
              end else
              begin
-                  self.socket.SendByte(0);
-                  self.socket.SendInteger(htonl(length(Value)));
+                  ValueLength := Length(Value);      // this is a free variable at this point
+                  // prepend respose code and size of value
+                  Value := #0 + chr(ValueLength shr 24) + chr((ValueLength shr 16) and $ff) + chr((ValueLength shr 8) and $ff) + chr(ValueLength and $ff) + Value;
                   self.socket.SendString(Value);
              end;
         end else
         if RequestCode = 1 then
         begin
              tablespace[TablespaceID].Assign(Key, Value);
-             self.socket.SendByte(0);
-             self.socket.SendInteger(0);
+             self.socket.SendString(#0#0#0#0#0);
         end else
         if RequestCode = 2 then
         begin
              tablespace[TablespaceID].Assign(Key, '');
-             self.socket.SendByte(0);
-             self.socket.SendInteger(0);
+             self.socket.SendString(#0#0#0#0#0);
         end;
 
         if (RequestCode and $80) > 0 then
