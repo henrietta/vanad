@@ -35,8 +35,8 @@ def scan_frame(frame):
         # Unzip the header. Will throw if not sufficient bytes there
     resultcode, data_len = unpack('!BL', str(frame[:5]))
 
-        # Check if frame is long enough, if not - throw
-    if len(frame) < 5 + data_len: raise Exception
+        # Check if frame is OK with length, if not - throw Exception
+    if len(frame) != 5 + data_len: raise Exception
 
         # Extract data and rest of the data
     data = frame[5:5+data_len]
@@ -68,14 +68,13 @@ class VanadConnection(object):
                                 connecting to database
 
         @type txrx_timeout: int
-        @param txrx_timeout: timeout for Tx/Rx operations
+        @param txrx_timeout: timeout for send/recv operations
 
-        @type eo_timeout: int
-        @param eo_timeout: timeout in which entire send or receive has to be completed
+        @type eo_timeout: dont-care
+        @param eo_timeout: supported for legacy applications. dont-care.
         """
         self.connect_timeout = connect_timeout
         self.txrx_timeout = txrx_timeout
-        self.eo_timeout = eo_timeout
 
         self.remote_address = address
         self.connected = False
@@ -92,7 +91,7 @@ class VanadConnection(object):
         self.socket = None
         self.connected = False
 
-    def __ensure_connected(self):
+    def __ensure_connected(self, force_reconnect=False):
         """PRIVATE METHOD.
         Ensured that connection to database is on.
         If it isn't, it will make it so.
@@ -101,7 +100,9 @@ class VanadConnection(object):
         if time() - self.last_activity > 3:     # Connection down
             self.__shut_sock()
 
-        while not self.connected:    # Assure that you are connected
+        while (not self.connected) or force_reconnect:    # Assure that you are connected
+            # we don't close our sockets here, because closing a socket might take a while
+            # we just plainly discard it. Mail me if you got a better idea.
             self.socket = socket(AF_INET, SOCK_STREAM)
             self.socket.settimeout(self.connect_timeout)
             try:
@@ -115,7 +116,7 @@ class VanadConnection(object):
             else:
                 self.connected = True
                 self.last_activity = time()
-                self.socket.setblocking(0)
+                self.socket.settimeout(self.txrx_timeout)
 
     def set_default_tablespace(self, id):
         """
@@ -126,47 +127,27 @@ class VanadConnection(object):
         """
         self.default_tablespace = id
 
-
     def __transact(self, to_send):
         """
         Transacts with the database. Will return value that got returned.
         Will raise exception if it could not be completed, and should be retried.
         """
+        
         # Send now
-        while len(to_send) > 0:
-            bytes_sent = self.socket.send(to_send)
-            to_send = to_send[bytes_sent:]
-
-                    # will throw on socket dying awful death
-            started_on = time()
-            while True:
-                rxs, txs, exs = select((self.socket, ), (self.socket, ), (), self.txrx_timeout)
-                if len(txs) == 1: break     # Socket writable again
-                if len(rxs) == 1: raise Exception   # Socket disconnected hard
-                if len(txs) == len(rxs) == 0: raise Exception # Timeout
-                    # Entire op timeout exceeded
-                if time() - started_on > self.eo_timeout: raise Exception
-
+        self.socket.sendall(to_send)
+        
         # Now, wait for reception
-        started_on = time()
-        received_data = bytearray()
+        recvdata = bytearray()
         while True:
-                rxs, txs, exs = select((self.socket, ), (), (), self.txrx_timeout)
-                if len(rxs) == 0: raise Exception # Timeout
-                    # Entire op timeout exceeded
-                if time() - started_on > self.eo_timeout: raise Exception
-                if len(rxs) == 1: # Socket ready or disconnected
-                    data = self.socket.recv(1024)
-                    if len(data) == 0: raise Exception # Socket disconnected
-
-                    received_data += data
-
-                    try:
-                        result, value = scan_frame(received_data)
-                    except:     # Frame not ready yet
-                        continue
-                    else:       # Frame completed
-                        break
+            k = self.socket.recv(1024)
+            if len(k) == 0: raise Exception     # server closed connection
+            recvdata.extend(k)
+            try:
+                result, value = scan_frame(recvdata)
+            except:     # Frame not ready yet
+                pass
+            else:       # Frame completed
+                break
         self.last_activity = time()     # Note the activity
         if result == 0x01: return None  # Not found for GET's
         if len(value) == 0: return None # None and empty string have same meaning
@@ -190,7 +171,7 @@ class VanadConnection(object):
             try:
                 return self.__transact(GET_to_bytes(tablespace, key))
             except:
-                self.__ensure_connected()
+                self.__ensure_connected(force_reconnect=True)
 
     def assign(self, key, value, tablespace=None):
         """
@@ -214,7 +195,7 @@ class VanadConnection(object):
                 self.__transact(ASSIGN_to_bytes(tablespace, key, value))
                 return
             except:
-                self.__ensure_connected()
+                self.__ensure_connected(force_reconnect=True)
 
     def delete(self, key, tablespace=None):
         """
@@ -235,4 +216,4 @@ class VanadConnection(object):
                 self.__transact(DELETE_to_bytes(tablespace, key))
                 return
             except:
-                self.__ensure_connected()
+                self.__ensure_connected(force_reconnect=True)
