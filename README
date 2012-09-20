@@ -6,3 +6,4 @@ It was made as a project for 'Introduction to programming' course on Politechnik
 Special thanks to course lecturer, Grzegorz Drałus, PhD.
 
 All protocol documentation is available on project's wiki.
+Vanad was designed for and is used at http://www.smok-serwis.pl as primary cache and volatile data store, boasting very low processor usage and zero hangs or core dumps.
