@@ -1,6 +1,7 @@
 unit exavltree;
 
 {$mode delphi}
+{$ASMMODE intel}
 
 interface
 
@@ -35,7 +36,21 @@ begin
 
   if node.Key = Key then
   begin
-    node.Value := Value;
+    {$ifdef i386}
+    asm                        // threadsafe
+       mov ebx, [Value]
+       lock xchg [node.Value], ebx
+       mov [Value], ebx
+    end;
+    {$elseif cpux86_64}        // threadsafe
+    asm
+       mov rbx, [Value]
+       lock xchg [node.Value], rbx
+       mov [Value], rbx
+    end;
+    {$else}
+       node.Value := Value;    // TODO: not threadsafe, crashes under load
+    {$endif}
     self.Lock.EndRead();
     Exit;
   end;
@@ -48,8 +63,9 @@ Inserting:
   if (node = nil) then
     self.Insert(Key, Value, node)
   else if node.Key = Key then
+  begin
      node.Value := Value
-  else
+  end else
     self.Insert(Key, Value, node);
 
   self.Lock.EndWrite();
