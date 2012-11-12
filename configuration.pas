@@ -17,6 +17,7 @@ var
   IniFile: TIniFile;
 procedure Initialize;
 begin
+     if not FileExists('config.ini') then Halt(1);   // no config.ini found!
      IniFile := TIniFile.Create('config.ini');
 end;
 procedure Finalize;
