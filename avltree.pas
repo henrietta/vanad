@@ -101,7 +101,7 @@ implementation
 // ==========================================================   Node locking
 procedure TAVLNode.Acquire();
 begin
-    while InterlockedExchange(self.Lock, 1) = 1 do begin end;
+    while InterlockedExchange(self.Lock, 1) = 1 do ThreadSwitch();
 end;
 
 procedure TAVLNode.Release();
