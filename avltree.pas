@@ -16,8 +16,12 @@ type
             Parent: TAVLNode;
             Left, Right: TAVLNode;
             Balance: ShortInt;
+            Lock: Cardinal;
         public
             Key, Value: AnsiString;
+
+            procedure Acquire();
+            procedure Release();
 
             function InsertLeft(n: TAVLNode): TAVLNode;
             function InsertRight(n: TAVLNode): TAVLNode;
@@ -94,6 +98,18 @@ type
 
 
 implementation
+// ==========================================================   Node locking
+procedure TAVLNode.Acquire();
+begin
+    while InterlockedExchange(self.Lock, 1) = 1 do begin end;
+end;
+
+procedure TAVLNode.Release();
+begin
+    self.Lock := 0;
+end;
+
+// ==========================================================   Reparenting helpers
 function ReparentIA(n, parent: TAVLNode): TAVLNode;
 {   if n is not nil, sets n.Parent = parent.       Returns n }
 begin
@@ -433,6 +449,7 @@ begin
      self.Balance := 0;
      self.Left := nil; self.Right := nil;
      self.Parent := nil;
+     self.Lock := 0;
 end;
 destructor TAVLNode.Destroy();
 begin

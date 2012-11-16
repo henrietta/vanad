@@ -36,24 +36,9 @@ begin
 
   if node.Key = Key then
   begin
-    {$ifdef i386}
-    asm                        // threadsafe
-       mov ebx, [Value]
-       lock xchg [node.Value], ebx
-       mov [Value], ebx
-    end;
-    {$else}
-        {$ifdef cpux86_64}        // threadsafe
-        asm
-           mov rbx, [Value]
-           lock xchg [node.Value], rbx
-           mov [Value], rbx
-        end;
-        {$else}
-           node.Value := '';
-           node.Value := Value;
-        {$endif}
-    {$endif}
+    node.Acquire();
+    node.Value := Value;
+    node.Release();
     self.Lock.EndRead();
     Exit;
   end;
@@ -67,7 +52,7 @@ Inserting:
     self.Insert(Key, Value, node)
   else if node.Key = Key then
   begin
-     node.Value := Value
+     node.Value := Value            // no need to acquire node lock, we've got the tablespace locked
   end else
     self.Insert(Key, Value, node);
 
@@ -86,7 +71,11 @@ begin
 
   if node <> nil then
     if node.Key = Key then
+    begin
+      node.Acquire();
       Result := node.Value;
+      node.Release();
+    end;
 
   self.Lock.EndRead();
 end;
