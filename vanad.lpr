@@ -130,5 +130,7 @@ begin
      VSocket.Finalize;
      for i := 0 to 255 do WritebackTable(i);
      Configuration.Finalize();
+     // Correct programming says we should FreeMem() our tree structure.
+     // Seeing as the app is just exiting, I say we don't.
 end.
 

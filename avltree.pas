@@ -20,6 +20,8 @@ type
         public
             Key, Value: AnsiString;
 
+            // threadsafety note: FPCRuntime properly interlocks increments and decrements
+            // as far as AnsiStrings are concerned.
             procedure Acquire();
             procedure Release();
 
