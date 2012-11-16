@@ -42,14 +42,17 @@ begin
        lock xchg [node.Value], ebx
        mov [Value], ebx
     end;
-    {$elseif cpux86_64}        // threadsafe
-    asm
-       mov rbx, [Value]
-       lock xchg [node.Value], rbx
-       mov [Value], rbx
-    end;
     {$else}
-       node.Value := Value;    // TODO: not threadsafe, crashes under load
+        {$ifdef cpux86_64}        // threadsafe
+        asm
+           mov rbx, [Value]
+           lock xchg [node.Value], rbx
+           mov [Value], rbx
+        end;
+        {$else}
+           node.Value := '';
+           node.Value := Value;
+        {$endif}
     {$endif}
     self.Lock.EndRead();
     Exit;
