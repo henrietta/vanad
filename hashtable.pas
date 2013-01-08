@@ -14,24 +14,29 @@ const
 type
   Softlock = Cardinal;
 
-  THashtableElement = record
-    Key: String;
-    Value: String;
-    Next: PHashtableElement;
+  THashtableElement = class
+    Key: AnsiString;
+    Value: AnsiString;
+    Next: THashtableElement;
+
+    constructor Create(Key, Value: AnsiString);
+    destructor Destroy();
   end;
-  PHashtableElement = ^THashtableElement;
 
   THashtableDescriptor = object
-    M1, M2, M3, W, R: Softlock;
-    ReadCount, WriteCount: Cardinal;    // counts of R/W
-    PFElem: PHashtableElement;
+    X: Softlock;
+    FElem: THashtableElement;
 
-    procedure LockForWrite();
-    procedure UnlockForWrite();
-    procedure LockForRead();
-    procedure UnlockForRead();
+    procedure Lock();
+    procedure Unlock();
 
-    procedure Initialize;
+    // following update procedures expect the lock to be acquired
+    procedure Assign(Key, Value: AnsiString);
+    function Read(const Key: AnsiString): AnsiString;
+    procedure Delete(const Key: AnsiString);
+
+    procedure Initialize();
+    procedure Finalize();
   end;
 
   THashtable = class
@@ -40,24 +45,82 @@ type
   public
     procedure Assign(Key, Value: AnsiString);
     function Read(Key: AnsiString): AnsiString;
+    procedure Delete(const Key: AnsiString);
 
     constructor Create();
     destructor Destroy();
   end;
 
+
+function Hash(const X: String): Cardinal;
+
 implementation
+// ----------------------------------------------------------- hashing function
+function Hash(const X: String): Cardinal;     // FNV hash
+var
+  i: Integer;
+begin
+  result := 2166136261;
+  for i := 1 to Length(X) do result := (result * 16777619) xor ord(X[i]);
+  result := result mod HASHTABSIZE;
+end;
+
+// ----------------------------------------------------------- THashtableElement
+destructor THashtableElement.Destroy;
+begin
+  self.Key := '';
+  self.Value := '';
+end;
+constructor THashtableElement.Create(Key, Value: AnsiString);
+begin
+     self.Key := Key;
+     self.Value := Value;
+     self.Next := nil;
+end;
 // ----------------------------------------------------------- THashtable
+procedure THashtable.Assign(Key, Value: AnsiString);
+begin
+  with self.Hashtable[Hash(Key)] do
+  begin
+     Lock();
+     Assign(Key, Value);
+     Unlock();
+  end;
+end;
+function THashtable.Read(Key: AnsiString): AnsiString;
+begin
+  with self.Hashtable[Hash(Key)] do
+  begin
+     Lock();
+     result := Read(Key);
+     Unlock();
+  end;
+end;
+procedure THashtable.Delete(const Key: AnsiString);
+begin
+  with self.Hashtable[Hash(Key)] do
+  begin
+     Lock();
+     Delete(Key);
+     Unlock();
+  end;
+end;
 constructor THashtable.Create();
 var
   i: Cardinal;
 begin
   for i := 0 to HASHTABSIZE-1 do self.Hashtable[i].Initialize();
 end;
-
-// ----------------------------------------------------------- helper functions
-procedure P(var s: Softlock);      // wait()
+destructor THashtable.Destroy();
 var
-  a: Semaphore;
+  i: Cardinal;
+begin
+  for i := 0 to HASHTABSIZE-1 do self.Hashtable[i].Finalize();
+end;
+// ----------------------------------------------------------- helper functions
+procedure Wait(var s: Softlock);      // wait()
+var
+  a: Softlock;
 begin
   a := System.InterLockedExchange(s, 1);
   while a = 1 do
@@ -67,61 +130,131 @@ begin
   end;
 end;
 
-procedure V(var s: Softlock);      // signal()
+procedure Signal(var s: Softlock);      // signal()
 begin
-     s := 0;
+   System.InterLockedDecrement(s);
 end;
 
 // -------------------------------------------------------- THashtableDescriptor
-procedure THashtableDescriptor.LockForWrite();
+procedure THashtableDescriptor.Lock();
 begin
-     P(self.M2);
-     Inc(self.WriteCount);
-     if self.WriteCount = 1 then P(self.R);
-     V(self.M2);
-
-     P(self.W);
+     Wait(self.X);
 end;
-procedure THashtableDescriptor.UnlockForWrite();
+procedure THashtableDescriptor.Unlock();
 begin
-     V(self.W);
-
-     P(self.M2);
-     Dec(self.WriteCount);
-     if self.WriteCount = 0 then V(self.R);
-     V(self.M2);
+     Signal(self.X);
 end;
-
-procedure THashtableDescriptor.LockForRead();
+procedure THashtableDescriptor.Finalize();
+var
+  CurrentElement, ProcessedElement: THashtableElement;
 begin
-     P(self.M3);
-     P(self.R);
-     P(self.M1);
-     Inc(self.ReadCount);
-     if self.ReadCount = 1 then P(self.W);
-     V(self.M1);
-     V(self.R);
-     V(self.M3);
-end;
-
-procedure THashtableDescriptor.UnlockForRead();
-begin
-  P(self.M1);
-  Dec(self.ReadCount);
-  if self.ReadCount = 0 then V(self.W);
-  V(self.M1);
+  CurrentElement := self.FElem;
+  while CurrentElement <> nil do
+  begin
+    ProcessedElement := CurrentElement;
+    CurrentElement := CurrentElement.Next;
+    ProcessedElement.Destroy();
+  end;
 end;
 
 procedure THashtableDescriptor.Initialize();
 begin
-  self.M1 := 0;
-  self.M2 := 0;
-  self.M3 := 0;
-  self.W := 0;
-  self.R := 0;
-  self.ReadCount := 0;
-  self.WriteCount := 0;
-  self.PFElem := nil;
+  self.X := 0;
+  self.FElem := nil;
+end;
+
+procedure THashtableDescriptor.Delete(const Key: AnsiString);
+var
+  PrevElement: THashtableElement = nil;
+  CurrentElement: THashtableElement;
+begin
+  CurrentElement := self.FElem;
+
+  while CurrentElement <> nil do
+  begin
+       if CurrentElement.Key = Key then break;
+       PrevElement := CurrentElement;
+       CurrentElement := CurrentElement.Next;
+  end;
+
+  // if CE=nil then item not found or list is empty (PE=nil also happens then)
+  if CurrentElement = nil then Exit;
+
+  // if PE=nil then item that we delete is the first one
+  if PrevElement = nil then
+  begin
+     // and CE is the item that we want to delete
+     self.FElem := CurrentElement.Next;
+     CurrentElement.Destroy;
+     Exit;
+  end;
+
+  // if CE.Next=nil then item that we want to delete is the last one
+  // AND the list has at least 2 elements (see previous condition)
+  if CurrentElement.Next=nil then
+  begin
+     // and PE is the item before it
+     PrevElement.Next := nil;
+     CurrentElement.Destroy;
+     Exit;
+  end;
+
+  // in this case, deleted item is in the middle of the list;
+  PrevElement.Next := CurrentElement.Next;
+  CurrentElement.Destroy;
+end;
+
+function THashtableDescriptor.Read(const Key: AnsiString): AnsiString;
+var
+  CurrentElement: THashtableElement;
+begin
+  CurrentElement := self.FElem;
+
+  // iterate over each element
+  while CurrentElement <> nil do
+  begin
+       // if we have a match, send it over
+       if CurrentElement.Key = Key then Exit(CurrentElement.Value);
+       CurrentElement := CurrentElement.Next;
+  end;
+
+  // if we are here, then value was not found. Return a null
+  Exit('');
+end;
+
+procedure THashtableDescriptor.Assign(Key, Value: AnsiString);
+var
+  CurrentElement: THashtableElement;
+begin
+  if self.FElem = nil then         // adding first element ever
+  begin
+    self.FElem := THashtableElement.Create(Key, Value);
+    Exit;
+  end;
+
+  // grab the current first element
+  CurrentElement := self.FElem;
+
+  // now we have to iterate over each element
+  while True do
+  begin
+     // is this element is the one we are looking for, update this and return
+     if CurrentElement.Key = Key then
+     begin
+        CurrentElement.Value := Value;
+        Exit;
+     end;
+
+     // in that case, is this the last element of the chain? Break if that's it
+     if CurrentElement.Next = nil then break;
+
+     // iterate to next one
+     CurrentElement := CurrentElement.Next;
+  end;
+
+  // if we are here, that means that CurrentElement iterated up to nil. We
+  // will be inserting a new one after CurrentElement - the last element in list
+  CurrentElement.Next := THashtableElement.Create(Key, Value);
 end;
 
 end.

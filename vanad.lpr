@@ -15,7 +15,7 @@ uses
 cthreads,
 {$ENDIF}
 Classes,  AVLTree, exavltree, SysUtils, Configuration, Sockets, VSocket,
-workerthread, CommonData, shutdowner;
+workerthread, CommonData, shutdowner, hashtable;
 
 
 procedure ReadTable(tabid: Integer);
