@@ -17,8 +17,17 @@ var
   IniFile: TIniFile;
 procedure Initialize;
 begin
-     if not FileExists('config.ini') then Halt(1);   // no config.ini found!
-     IniFile := TIniFile.Create('config.ini');
+     if System.argc = 1 then
+     begin
+          // no arguments passed - assume the defaults
+          if not FileExists('config.ini') then Halt(1);   // no config.ini found!
+          IniFile := TIniFile.Create('config.ini');
+     end else
+     begin
+          // first parameter is the name of the config file
+       if not FileExists(System.argv[1]) then Halt(1);   // no config.ini found!
+       IniFile := TIniFile.Create(System.argv[1]);
+     end;
 end;
 procedure Finalize;
 begin
