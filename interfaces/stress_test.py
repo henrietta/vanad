@@ -4,10 +4,10 @@ import time
 import string
 import random
 vnd = vanad.VanadConnection(('127.0.0.1', 1000))
-vnd.set_default_tablespace(0)
+vnd.set_default_tablespace(random.choice((0, 1, 2)))
 
 test_writes = {}
-for i in xrange(0, 1000):
+for i in xrange(0, 10000):
     test_writes[''.join(random.choice(string.letters) for i in xrange(20))] = ''.join(random.choice(string.letters) for i in xrange(30))
 
 lasttm = int(time.time())
@@ -29,6 +29,6 @@ while True:
             sys.exit()            
 
  if int(time.time()) != lasttm:
-    print 'CallsPerSecond: %s' % cips
+    print 'CallsPerSecond: %s' % cps
     cps = 0
     lasttm = int(time.time())
