@@ -8,8 +8,7 @@ uses
   Classes, SysUtils, contnrs;
 
 const
-  HASHLEN = 16;
-  HASHTABSIZE = 2 shl HASHLEN;
+  DEFAULT_HASHTABLE_SIZE = 1024;
 
 type
   Softlock = Cardinal;
@@ -40,29 +39,47 @@ type
   end;
 
   THashtable = class
-  private
-    Hashtable: array[0..HASHTABSIZE-1] of THashtableDescriptor;
   public
+    DescriptorsCount: Cardinal;
+    Hashtable: array of THashtableDescriptor;
+
+    function Hash(const X: AnsiString): Cardinal;
+
     procedure Assign(Key, Value: AnsiString);
     function Read(Key: AnsiString): AnsiString;
     procedure Delete(const Key: AnsiString);
 
-    constructor Create();
+    constructor Create(); overload;
+    constructor Create(Descriptors: Cardinal); overload;
     destructor Destroy();
   end;
 
+procedure EnsureTablespaceExists(i: Integer);
+function DoesTablespaceExist(i: Integer): Boolean;
 
-function Hash(const X: String): Cardinal;
+procedure Initialize;
 
 implementation
+uses
+  CommonData;
+
+procedure Initialize;
+var
+  i: Cardinal;
+begin
+  // they are created on demand but they need to be set to null, so that functions
+  // recognize when should they be created
+  for i := 0 to 255 do
+      tablespace[i] := nil;
+end;
 // ----------------------------------------------------------- hashing function
-function Hash(const X: String): Cardinal;     // FNV hash
+function THashtable.Hash(const X: AnsiString): Cardinal;     // FNV hash
 var
   i: Integer;
 begin
   result := 2166136261;
   for i := 1 to Length(X) do result := (result * 16777619) xor ord(X[i]);
-  result := result mod HASHTABSIZE;
+  result := result mod self.DescriptorsCount;
 end;
 
 // ----------------------------------------------------------- THashtableElement
@@ -80,7 +97,7 @@ end;
 // ----------------------------------------------------------- THashtable
 procedure THashtable.Assign(Key, Value: AnsiString);
 begin
-  with self.Hashtable[Hash(Key)] do
+  with self.Hashtable[self.Hash(Key)] do
   begin
      Lock();
      Assign(Key, Value);
@@ -89,7 +106,7 @@ begin
 end;
 function THashtable.Read(Key: AnsiString): AnsiString;
 begin
-  with self.Hashtable[Hash(Key)] do
+  with self.Hashtable[self.Hash(Key)] do
   begin
      Lock();
      result := Read(Key);
@@ -98,26 +115,48 @@ begin
 end;
 procedure THashtable.Delete(const Key: AnsiString);
 begin
-  with self.Hashtable[Hash(Key)] do
+  with self.Hashtable[self.Hash(Key)] do
   begin
      Lock();
      Delete(Key);
      Unlock();
   end;
 end;
-constructor THashtable.Create();
+constructor THashtable.Create(); overload;
 var
   i: Cardinal;
 begin
-  for i := 0 to HASHTABSIZE-1 do self.Hashtable[i].Initialize();
+  self.DescriptorsCount := DEFAULT_HASHTABLE_SIZE;
+  self.Hashtable := nil;
+  SetLength(self.Hashtable, self.DescriptorsCount);
+  for i := 0 to self.DescriptorsCount-1 do self.Hashtable[i].Initialize();
+end;
+constructor THashtable.Create(Descriptors: Cardinal); overload;
+var
+  i: Cardinal;
+begin
+  self.DescriptorsCount := Descriptors;
+  self.Hashtable := nil;
+  SetLength(self.Hashtable, self.DescriptorsCount);
+  for i := 0 to self.DescriptorsCount-1 do self.Hashtable[i].Initialize();
 end;
 destructor THashtable.Destroy();
 var
   i: Cardinal;
 begin
-  for i := 0 to HASHTABSIZE-1 do self.Hashtable[i].Finalize();
+  for i := 0 to self.DescriptorsCount-1 do self.Hashtable[i].Finalize();
+  SetLength(self.Hashtable, 0);
 end;
 // ----------------------------------------------------------- helper functions
+function DoesTablespaceExist(i: Integer): Boolean;
+begin
+  result := tablespace[i] <> nil;
+end;
+procedure EnsureTablespaceExists(i: Integer);
+begin
+  if tablespace[i] = nil then
+     tablespace[i] := THashtable.Create();
+end;
 procedure Wait(var s: Softlock);      // wait()
 var
   a: Softlock;

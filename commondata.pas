@@ -5,10 +5,10 @@ unit CommonData;
 interface
 
 uses
-  ExAVLTree;
+  hashtable;
 
 var
-  tablespace: array[0..255] of TExAVLTree;
+  tablespace: array[0..255] of THashtable;
   SocketOpTimeout: Cardinal;
 
 

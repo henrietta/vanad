@@ -5,7 +5,7 @@ unit workerthread;
 interface
 
 uses
-    VSocket, Classes, CommonData,
+    VSocket, Classes, CommonData, hashtable,
              {$IFDEF UNIX}sockets{$ENDIF}
              {$IFDEF Windows}winsock{$ENDIF};
 
@@ -65,6 +65,7 @@ begin
 
         if RequestCode = 0 then
         begin
+             EnsureTablespaceExists(TablespaceID);
              Value := tablespace[TablespaceID].Read(Key);
              if Value = '' then
              begin
@@ -79,12 +80,14 @@ begin
         end else
         if RequestCode = 1 then
         begin
+             EnsureTablespaceExists(TablespaceID);
              tablespace[TablespaceID].Assign(Key, Value);
              self.socket.SendString(#0#0#0#0#0);
         end else
         if RequestCode = 2 then
         begin
-             tablespace[TablespaceID].Assign(Key, '');
+             EnsureTablespaceExists(TablespaceID);
+             tablespace[TablespaceID].Delete(Key);
              self.socket.SendString(#0#0#0#0#0);
         end;
 
