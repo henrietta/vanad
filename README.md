@@ -7,3 +7,6 @@ Vanad is a peculiarly fast associative persistent portable in-memory string-stri
 + **database**: it talks over TCP
 
 See project wiki for more info, see LICENSE for license text
+
+# tl;dr 
+partitioned memcached without dropping keys on too low memory
