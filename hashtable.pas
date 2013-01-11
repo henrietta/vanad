@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, contnrs;
 
 const
-  DEFAULT_HASHTABLE_SIZE = 1024;
+  DEFAULT_HASHTABLE_SIZE = 2048;
 
 type
   Softlock = Cardinal;
