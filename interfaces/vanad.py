@@ -5,6 +5,8 @@ from select import select
 
 from struct import pack, unpack
 
+from threading import Lock
+
 RQT_GET = 0x00
 RQT_ASSIGN = 0x01
 RQT_DELETE = 0x02
@@ -73,6 +75,7 @@ class VanadConnection(object):
         @type eo_timeout: dont-care
         @param eo_timeout: supported for legacy applications. dont-care.
         """
+        self.lock = Lock()
         self.connect_timeout = connect_timeout
         self.txrx_timeout = txrx_timeout
 
@@ -164,12 +167,17 @@ class VanadConnection(object):
         @param tablespace: number of tablespace to fetch from. If None,
                            default tablespace will be used
         """
+
+        self.lock.acquire()
+
         if tablespace == None: tablespace = self.default_tablespace
 
         self.__ensure_connected()
         while True:
             try:
-                return self.__transact(GET_to_bytes(tablespace, key))
+                f = self.__transact(GET_to_bytes(tablespace, key))
+                self.lock.release()
+                return f
             except:
                 self.__ensure_connected(force_reconnect=True)
 
@@ -187,12 +195,14 @@ class VanadConnection(object):
         @param tablespace: number of tablespace to write to. If None,
                            default tablespace will be used
         """
+        self.lock.acquire()
         if tablespace == None: tablespace = self.default_tablespace
 
         self.__ensure_connected()
         while True:
             try:
                 self.__transact(ASSIGN_to_bytes(tablespace, key, value))
+                self.lock.release()
                 return
             except:
                 self.__ensure_connected(force_reconnect=True)
@@ -208,12 +218,14 @@ class VanadConnection(object):
         @param tablespace: number of tablespace to write to. If None,
                            default tablespace will be used
         """
+        self.lock.acquire()
         if tablespace == None: tablespace = self.default_tablespace
 
         self.__ensure_connected()
         while True:
             try:
                 self.__transact(DELETE_to_bytes(tablespace, key))
+                self.lock.release()
                 return
             except:
                 self.__ensure_connected(force_reconnect=True)
